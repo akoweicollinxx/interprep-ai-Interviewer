@@ -44,38 +44,48 @@ const AuthForm = ({ type }: { type: FormType }) => {
     },
   })
 
-  const handleGoogleSignIn = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider)
-      const user = result.user
-      const idToken = await user.getIdToken()
+const handleGoogleSignIn = async () => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider)
+    const user = result.user
+    const idToken = await user.getIdToken()
 
-      await signIn({
-        email: user.email!,
-        idToken,
-      })
+    await signIn({
+      email: user.email!,
+      idToken,
+    })
 
-      toast.success("Signed in with Google")
-      router.push("/")
-    } catch (error: any) {
-      if (error.code === "auth/account-exists-with-different-credential") {
-        const email = error.customData.email
-        const pendingCred = error.credential
+    toast.success("Signed in with Google")
+    router.push("/")
+  } catch (error: any) {
+    if (error.code === "auth/popup-closed-by-user") {
+      toast.warning("Google sign-in was cancelled. Please try again.")
+      return
+    }
 
+    if (error.code === "auth/account-exists-with-different-credential") {
+      const email = error.customData?.email
+      const pendingCred = error.credential
+
+      if (email) {
         const methods = await fetchSignInMethodsForEmail(auth, email)
         if (methods.includes("password")) {
           toast.error(
-            "You already signed up using email/password. Please sign in with email, then link Google in settings."
+            "This email is registered with a password. Sign in with email and link Google later in settings."
           )
         } else {
           toast.error("Account exists with a different provider. Try another sign-in method.")
         }
       } else {
-        console.error(error)
-        toast.error("Google sign-in failed")
+        toast.error("Account already exists with a different credential.")
       }
+    } else {
+      console.error("Google sign-in error:", error)
+      toast.error("Google sign-in failed. Please try again.")
     }
   }
+}
+
 
   const isSignIn = type === "sign-in"
 
